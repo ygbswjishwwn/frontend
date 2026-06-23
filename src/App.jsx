@@ -86,10 +86,22 @@ function Toggle({ checked, onChange, theme }) {
   );
 }
 
-function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSaveSettings }) {
+function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSaveSettings, model, setModel }) {
   const [view, setView] = useState("list");
   const [systemPrompt, setSystemPrompt] = useState(settings?.system_prompt || "你是阿晏，说话简洁温柔，不绕弯，不说教。");
   const [saving, setSaving] = useState(false);
+  const [memories, setMemories] = useState([]);
+  const [usage, setUsage] = useState(null);
+  const [webSearch, setWebSearch] = useState(settings?.web_search ?? false);
+
+  useEffect(() => {
+    if (view === "memory") {
+      fetch(`${BACKEND_URL}/memories`).then(r => r.json()).then(setMemories).catch(console.error);
+    }
+    if (view === "usage") {
+      fetch(`${BACKEND_URL}/usage`).then(r => r.json()).then(setUsage).catch(console.error);
+    }
+  }, [view]);
 
   const items = [
     { id: "appearance", label: "外观", icon: Palette },
@@ -129,6 +141,7 @@ function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSave
             ))}
           </div>
         );
+
       case "prompt":
         return (
           <div className="flex flex-col gap-2">
@@ -143,6 +156,130 @@ function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSave
             </button>
           </div>
         );
+
+      case "model":
+        return (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs" style={{ color: theme.textSoft }}>当前对话使用的模型</p>
+            {MODELS.map(m => (
+              <button key={m.id} onClick={() => setModel(m)}
+                className="flex items-center justify-between rounded-xl px-3.5 py-3"
+                style={{ border: `1.5px solid ${model.id === m.id ? theme.accent : theme.border}`, background: theme.surfaceSoft }}>
+                <div className="flex flex-col items-start gap-0.5">
+                  <span className="text-[14px]" style={{ color: theme.text }}>{m.label}</span>
+                  <span className="text-[11px]" style={{ color: theme.textSoft }}>{m.provider}</span>
+                </div>
+                {model.id === m.id && <Check size={15} style={{ color: theme.accent }} />}
+              </button>
+            ))}
+          </div>
+        );
+
+      case "memory":
+        return (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs" style={{ color: theme.textSoft }}>历史对话压缩后的记忆摘要</p>
+            {memories.length === 0
+              ? <p className="text-[13px] text-center py-8" style={{ color: theme.textSoft }}>暂无记忆</p>
+              : memories.map(mem => (
+                <div key={mem.id} className="flex items-start justify-between gap-2 rounded-xl p-3"
+                  style={{ background: theme.surfaceSoft, border: `1px solid ${theme.border}` }}>
+                  <p className="flex-1 text-[13px] leading-relaxed" style={{ color: theme.text }}>{mem.summary}</p>
+                  <button onClick={async () => {
+                    await fetch(`${BACKEND_URL}/memories/${mem.id}`, { method: "DELETE" });
+                    setMemories(prev => prev.filter(m => m.id !== mem.id));
+                  }} style={{ color: theme.textSoft, flexShrink: 0 }}>
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              ))
+            }
+          </div>
+        );
+
+      case "usage":
+        return (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs" style={{ color: theme.textSoft }}>token 用量统计</p>
+            {!usage
+              ? <p className="text-[13px]" style={{ color: theme.textSoft }}>加载中…</p>
+              : (
+                <div className="flex flex-col gap-2">
+                  {[
+                    { label: "总输入 tokens", val: usage.total_input ?? "—" },
+                    { label: "总输出 tokens", val: usage.total_output ?? "—" },
+                    { label: "总对话次数", val: usage.total_messages ?? "—" },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center justify-between rounded-xl px-3.5 py-3"
+                      style={{ background: theme.surfaceSoft, border: `1px solid ${theme.border}` }}>
+                      <span className="text-[13px]" style={{ color: theme.textSoft }}>{item.label}</span>
+                      <span className="text-[14px] font-medium" style={{ color: theme.text }}>{item.val}</span>
+                    </div>
+                  ))}
+                </div>
+              )
+            }
+          </div>
+        );
+
+      case "data":
+        return (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs" style={{ color: theme.textSoft }}>导出或清空你的数据</p>
+            <button onClick={async () => {
+              const res = await fetch(`${BACKEND_URL}/export`);
+              const blob = await res.blob();
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url; a.download = "yan-backup.json"; a.click();
+              URL.revokeObjectURL(url);
+            }} className="rounded-xl py-2.5 text-[13px] font-medium"
+              style={{ background: theme.accentSoft, color: theme.text, border: `1px solid ${theme.border}` }}>
+              导出全部数据
+            </button>
+            <button onClick={async () => {
+              if (!confirm("确定清空所有对话？不可恢复。")) return;
+              await fetch(`${BACKEND_URL}/data/all`, { method: "DELETE" });
+              alert("已清空");
+            }} className="rounded-xl py-2.5 text-[13px] font-medium"
+              style={{ background: "#FEE2E2", color: "#B91C1C" }}>
+              清空所有数据
+            </button>
+          </div>
+        );
+
+      case "search":
+        return (
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[14px]" style={{ color: theme.text }}>联网搜索</p>
+                <p className="text-[12px]" style={{ color: theme.textSoft }}>回答时自动搜索相关信息</p>
+              </div>
+              <Toggle checked={webSearch} onChange={async (v) => {
+                setWebSearch(v);
+                await onSaveSettings({ web_search: v });
+              }} theme={theme} />
+            </div>
+            {webSearch && (
+              <p className="text-[12px] rounded-xl p-3" style={{ background: theme.surfaceSoft, color: theme.textSoft }}>
+                需要后端配置 Tavily API Key 才能生效
+              </p>
+            )}
+          </div>
+        );
+
+      case "mcp":
+        return (
+          <div className="flex flex-col gap-2">
+            <p className="text-xs" style={{ color: theme.textSoft }}>MCP 工具接口</p>
+            <p className="text-[13px] rounded-xl p-3"
+              style={{ background: theme.surfaceSoft, color: theme.textSoft, border: `1px solid ${theme.border}` }}>
+              暂未接入，后续开发中
+            </p>
+          </div>
+        );
+
       default:
         return <p className="text-[13px]" style={{ color: theme.textSoft }}>待开发</p>;
     }
@@ -208,7 +345,6 @@ export default function YanChatInterface() {
   const [settings, setSettings] = useState(null);
   const scrollRef = useRef(null);
 
-  // 加载会话列表
   const loadSessions = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/sessions`);
@@ -220,7 +356,6 @@ export default function YanChatInterface() {
     } catch (e) { console.error(e); }
   };
 
-  // 加载消息
   const loadMessages = async (sessionId) => {
     try {
       const res = await fetch(`${BACKEND_URL}/sessions/${sessionId}/messages`);
@@ -230,7 +365,6 @@ export default function YanChatInterface() {
     } catch (e) { console.error(e); }
   };
 
-  // 加载设置
   const loadSettings = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/settings`);
@@ -285,7 +419,6 @@ export default function YanChatInterface() {
       });
       const data = await res.json();
       setMessages(prev => [...prev, { id: `tmp-ai-${Date.now()}`, role: "assistant", content: data.reply }]);
-      // 更新会话名（如果还是"新对话"就用第一条消息前10字）
       if (activeSession.name === "新对话") {
         const newName = text.slice(0, 20);
         await fetch(`${BACKEND_URL}/sessions/${activeSession.id}`, {
@@ -470,8 +603,11 @@ export default function YanChatInterface() {
       </div>
 
       {settingsOpen && (
-        <SettingsModal theme={theme} themeKey={themeKey} setThemeKey={setThemeKey}
-          onClose={() => setSettingsOpen(false)} settings={settings} onSaveSettings={saveSettings} />
+        <SettingsModal
+          theme={theme} themeKey={themeKey} setThemeKey={setThemeKey}
+          onClose={() => setSettingsOpen(false)} settings={settings} onSaveSettings={saveSettings}
+          model={model} setModel={setModel}
+        />
       )}
     </div>
   );
