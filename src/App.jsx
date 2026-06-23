@@ -263,7 +263,7 @@ function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSave
             </div>
             {webSearch && (
               <p className="text-[12px] rounded-xl p-3" style={{ background: theme.surfaceSoft, color: theme.textSoft }}>
-                需要后端配置 Tavily API Key 才能生效
+                已开启，回答时会自动搜索相关信息
               </p>
             )}
           </div>
