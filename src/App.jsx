@@ -141,7 +141,6 @@ function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSave
             ))}
           </div>
         );
-
       case "prompt":
         return (
           <div className="flex flex-col gap-2">
@@ -156,7 +155,6 @@ function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSave
             </button>
           </div>
         );
-
       case "model":
         return (
           <div className="flex flex-col gap-3">
@@ -174,7 +172,6 @@ function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSave
             ))}
           </div>
         );
-
       case "memory":
         return (
           <div className="flex flex-col gap-2">
@@ -196,7 +193,6 @@ function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSave
             }
           </div>
         );
-
       case "usage":
         return (
           <div className="flex flex-col gap-3">
@@ -221,7 +217,6 @@ function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSave
             }
           </div>
         );
-
       case "data":
         return (
           <div className="flex flex-col gap-3">
@@ -230,9 +225,7 @@ function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSave
               const res = await fetch(`${BACKEND_URL}/export`);
               const blob = await res.blob();
               const url = URL.createObjectURL(blob);
-              const a = document.createElement("a");
-              a.href = url; a.download = "yan-backup.json"; a.click();
-              URL.revokeObjectURL(url);
+              const a = document.createElement("a"); a.href = url; a.download = "yan-backup.json"; a.click();
             }} className="rounded-xl py-2.5 text-[13px] font-medium"
               style={{ background: theme.accentSoft, color: theme.text, border: `1px solid ${theme.border}` }}>
               导出全部数据
@@ -247,7 +240,6 @@ function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSave
             </button>
           </div>
         );
-
       case "search":
         return (
           <div className="flex flex-col gap-3">
@@ -268,20 +260,17 @@ function SettingsModal({ theme, themeKey, setThemeKey, onClose, settings, onSave
             )}
           </div>
         );
-
       case "mcp":
         return (
           <div className="flex flex-col gap-2">
             <p className="text-xs" style={{ color: theme.textSoft }}>MCP 工具接口</p>
-            <p className="text-[13px] rounded-xl p-3"
-              style={{ background: theme.surfaceSoft, color: theme.textSoft, border: `1px solid ${theme.border}` }}>
+            <p className="text-[13px] rounded-xl p-3" style={{ background: theme.surfaceSoft, color: theme.textSoft, border: `1px solid ${theme.border}` }}>
               暂未接入，后续开发中
             </p>
           </div>
         );
-
       default:
-        return <p className="text-[13px]" style={{ color: theme.textSoft }}>待开发</p>;
+        return null;
     }
   };
 
@@ -345,6 +334,7 @@ export default function YanChatInterface() {
   const [settings, setSettings] = useState(null);
   const scrollRef = useRef(null);
 
+  // 加载会话列表
   const loadSessions = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/sessions`);
@@ -356,6 +346,7 @@ export default function YanChatInterface() {
     } catch (e) { console.error(e); }
   };
 
+  // 加载消息
   const loadMessages = async (sessionId) => {
     try {
       const res = await fetch(`${BACKEND_URL}/sessions/${sessionId}/messages`);
@@ -365,6 +356,7 @@ export default function YanChatInterface() {
     } catch (e) { console.error(e); }
   };
 
+  // 加载设置
   const loadSettings = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/settings`);
@@ -436,7 +428,8 @@ export default function YanChatInterface() {
   };
 
   const handleCopy = (id, text) => {
-    navigator.clipboard.writeText(text);
+    if (!text) return;
+    navigator.clipboard.writeText(text).catch(() => {});
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1200);
   };
@@ -466,7 +459,6 @@ export default function YanChatInterface() {
         .sidebar-session:hover .delete-btn { opacity: 1; }
       `}</style>
 
-      {/* 开屏页 */}
       {!booted && (
         <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center gap-5"
           style={{ background: theme.bg }}>
@@ -486,7 +478,6 @@ export default function YanChatInterface() {
         </div>
       )}
 
-      {/* 侧边栏 */}
       <div className="flex shrink-0 flex-col overflow-hidden p-3 transition-all duration-200"
         style={{
           borderRight: sidebarOpen ? `1px solid ${theme.border}` : "none",
@@ -532,7 +523,6 @@ export default function YanChatInterface() {
         </button>
       </div>
 
-      {/* 主区域 */}
       <div className="flex flex-1 flex-col">
         <div className="relative flex items-center justify-center py-3"
           style={{ borderBottom: `1px solid ${theme.border}` }}>
@@ -603,10 +593,15 @@ export default function YanChatInterface() {
       </div>
 
       {settingsOpen && (
-        <SettingsModal
-          theme={theme} themeKey={themeKey} setThemeKey={setThemeKey}
-          onClose={() => setSettingsOpen(false)} settings={settings} onSaveSettings={saveSettings}
-          model={model} setModel={setModel}
+        <SettingsModal 
+          theme={theme} 
+          themeKey={themeKey} 
+          setThemeKey={setThemeKey}
+          onClose={() => setSettingsOpen(false)} 
+          settings={settings} 
+          onSaveSettings={saveSettings}
+          model={model} 
+          setModel={setModel} 
         />
       )}
     </div>
