@@ -321,7 +321,7 @@ export default function YanChatInterface() {
   const [booted, setBooted] = useState(false);
   const [themeKey, setThemeKey] = useState("warm");
   const theme = THEMES[themeKey];
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const [sessions, setSessions] = useState([]);
   const [activeSession, setActiveSession] = useState(null);
   const [model, setModel] = useState(MODELS[0]);
